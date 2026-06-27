@@ -21,8 +21,9 @@ export function toBlocks(
 
   const stepSize = Math.floor(blockSize * (1 - overlap));
 
-  const blockQuantity =
-    (samplesWithPadding.length - (blockSize - stepSize)) / stepSize;
+  const blockQuantity = Math.round(
+    (samplesWithPadding.length - (blockSize - stepSize)) / stepSize,
+  );
 
   const blocks = new Array(blockQuantity)
     .fill(0)

@@ -34,17 +34,17 @@ export function fft(samples: number[]): ComplexNumber[] {
   const twiddleFactors = new Array(Math.floor(N / 2)).fill(0).map(
     (_, i): ComplexNumber => ({
       real: Math.cos((2 * Math.PI * i) / N),
-      imaginary: -Math.cos((2 * Math.PI * i) / N),
+      imaginary: -Math.sin((2 * Math.PI * i) / N),
     }),
   );
 
-  const fftEvenProcessed = twiddleFactors.map((_, i) =>
-    multiplyComplex(twiddleFactors[i], fftEven[i]),
+  const fftOddProcessed = twiddleFactors.map((_, i) =>
+    multiplyComplex(twiddleFactors[i], fftOdd[i]),
   );
 
   const result = [
-    ...fftOdd.map((_, i) => addComplex(fftOdd[i], fftEvenProcessed[i])),
-    ...fftOdd.map((_, i) => subtractComplex(fftOdd[i], fftEvenProcessed[i])),
+    ...fftEven.map((_, i) => addComplex(fftEven[i], fftOddProcessed[i])),
+    ...fftEven.map((_, i) => subtractComplex(fftEven[i], fftOddProcessed[i])),
   ];
 
   return result;
