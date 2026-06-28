@@ -471,8 +471,9 @@ export default function Home() {
                       (getSelectedFrequencyColorClass(
                         rowsCount - (1 + rowIndex),
                       ) ??
-                        getFrequencyColorClass(rowsCount - (1 + rowIndex)) ??
-                        (isWhiteBackground ? "bg-black" : "bg-white"))
+                        ((showKeyLines &&
+                          getFrequencyColorClass(rowsCount - (1 + rowIndex))) ||
+                          (isWhiteBackground ? "bg-black" : "bg-white")))
                       // getColorClass(
                       //   normalizedFftMagnitudes[columnIndex][
                       //     rowsCount - (1 + rowIndex)
