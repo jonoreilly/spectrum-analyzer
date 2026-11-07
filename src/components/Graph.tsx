@@ -3,10 +3,10 @@ import {
   ComplexNumber,
   getMagnitude,
 } from "@/src/utils/fourierTransform/complexNumbers";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { Size } from "./Settings";
 
-export default function Graph({
+export default memo(function Graph({
   frequencies,
   sampleRate,
   croppedFftRows,
@@ -16,6 +16,7 @@ export default function Graph({
   compression,
   showKeyLines,
   selectedNotes,
+  onCellHover,
 }: {
   frequencies: ComplexNumber[][];
   sampleRate: number;
@@ -26,6 +27,14 @@ export default function Graph({
   compression: number;
   showKeyLines: boolean;
   selectedNotes: Note[];
+  onCellHover: (position?: {
+    column: number;
+    frequencies: {
+      low: number;
+      high: number;
+    };
+    magnitude: number;
+  }) => void;
 }) {
   const normalizedFftMagnitudes = useMemo(() => {
     const croppedFft = frequencies.map((block) =>
@@ -167,46 +176,61 @@ export default function Graph({
           "flex flex-col border " +
           (isWhiteBackground ? "bg-white" : "bg-black")
         }
+        onMouseLeave={() => onCellHover(undefined)}
       >
         {new Array(rowsCount).fill(0).map((_, rowIndex) => (
           <div key={rowIndex} className="flex">
             {new Array(columnsCount).fill(0).map((_, columnIndex) => (
               <div
                 key={columnIndex}
-                className={
-                  " hover:outline " +
-                  sizeClass +
-                  " " +
-                  (getSelectedFrequencyColorClass(rowsCount - (1 + rowIndex)) ??
-                    ((showKeyLines &&
-                      getFrequencyColorClass(rowsCount - (1 + rowIndex))) ||
-                      (isWhiteBackground ? "bg-black" : "bg-white")))
-                  // getColorClass(
-                  //   normalizedFftMagnitudes[columnIndex][
-                  //     rowsCount - (1 + rowIndex)
-                  //   ],
-                  // )
-                }
-                style={{
-                  opacity: isSelectedFrequency(rowsCount - (1 + rowIndex))
-                    ? 1
-                    : getMagnitudeCompressed(
-                        normalizedFftMagnitudes[columnIndex][
-                          rowsCount - (1 + rowIndex)
-                        ],
-                      ),
-                }}
                 title={getTitle(
                   normalizedFftMagnitudes[columnIndex][
                     rowsCount - (1 + rowIndex)
                   ],
                   rowsCount - (1 + rowIndex),
                 )}
-              ></div>
+                className={"hover:z-10 hover:outline " + sizeClass}
+                onMouseEnter={() =>
+                  onCellHover({
+                    column: columnIndex,
+                    frequencies: getFrequencies(rowsCount - (1 + rowIndex)),
+                    magnitude:
+                      normalizedFftMagnitudes[columnIndex][
+                        rowsCount - (1 + rowIndex)
+                      ],
+                  })
+                }
+              >
+                <div
+                  className={
+                    "size-full " +
+                    (getSelectedFrequencyColorClass(
+                      rowsCount - (1 + rowIndex),
+                    ) ??
+                      ((showKeyLines &&
+                        getFrequencyColorClass(rowsCount - (1 + rowIndex))) ||
+                        (isWhiteBackground ? "bg-black" : "bg-white")))
+                    // getColorClass(
+                    //   normalizedFftMagnitudes[columnIndex][
+                    //     rowsCount - (1 + rowIndex)
+                    //   ],
+                    // )
+                  }
+                  style={{
+                    opacity: isSelectedFrequency(rowsCount - (1 + rowIndex))
+                      ? 1
+                      : getMagnitudeCompressed(
+                          normalizedFftMagnitudes[columnIndex][
+                            rowsCount - (1 + rowIndex)
+                          ],
+                        ),
+                  }}
+                />
+              </div>
             ))}
           </div>
         ))}
       </div>
     </div>
   );
-}
+});

@@ -70,7 +70,7 @@ export default function Settings({
   function formatFileDuration(totalSeconds: number) {
     const milliseconds = (totalSeconds % 1) * 1_000;
 
-    const seconds = totalSeconds % 60;
+    const seconds = Math.floor(totalSeconds) % 60;
 
     const minutes = Math.floor(totalSeconds / 60) % 60;
 

@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { decodeAudioFile, setMicrophoneListener } from "@/src/utils/audio";
 import { doFft } from "@/src/utils/fourierTransform";
-import { Note } from "@/src/utils/audio/notes";
+import { Note, notes } from "@/src/utils/audio/notes";
 import Settings, { Size } from "@/src/components/Settings";
 import Piano from "@/src/components/Piano";
 import Graph from "@/src/components/Graph";
@@ -107,6 +107,29 @@ export default function Home() {
 
   const croppedFftRows = 250;
 
+  const [hoveredCell, setHoveredCell] = useState<{
+    column: number;
+    frequencies: {
+      low: number;
+      high: number;
+    };
+    magnitude: number;
+  }>();
+
+  const hoveredNote = useMemo(() => {
+    if (!hoveredCell) {
+      return;
+    }
+
+    return notes.find((note) =>
+      note.frequencies.some(
+        (frequency) =>
+          hoveredCell.frequencies.low <= frequency &&
+          frequency <= hoveredCell.frequencies.high,
+      ),
+    );
+  }, [hoveredCell]);
+
   return (
     <div>
       <div className="flex gap-2">
@@ -138,17 +161,41 @@ export default function Home() {
       </div>
 
       {fft.status === "success" && audioBuffer.status === "success" && (
-        <Graph
-          frequencies={fft.value}
-          sampleRate={audioBuffer.value.sampleRate}
-          croppedFftRows={croppedFftRows}
-          cellSize={cellSize}
-          isWhiteBackground={isWhiteBackground}
-          hasCompression={hasCompression}
-          compression={compression}
-          showKeyLines={showKeyLines}
-          selectedNotes={selectedNotes}
-        />
+        <div className="flex">
+          <Graph
+            frequencies={fft.value}
+            sampleRate={audioBuffer.value.sampleRate}
+            croppedFftRows={croppedFftRows}
+            cellSize={cellSize}
+            isWhiteBackground={isWhiteBackground}
+            hasCompression={hasCompression}
+            compression={compression}
+            showKeyLines={showKeyLines}
+            selectedNotes={selectedNotes}
+            onCellHover={setHoveredCell}
+          />
+
+          <div>
+            <div>
+              <div>Column: {hoveredCell?.column}</div>
+
+              <div>
+                Frequencies: {Math.floor(hoveredCell?.frequencies.low ?? 0)}Hz -{" "}
+                {Math.floor(hoveredCell?.frequencies.high ?? 0)}Hz
+              </div>
+
+              <div>
+                Magnitude: {(hoveredCell?.magnitude ?? 0 * 100).toFixed(2)} %
+              </div>
+
+              {hoveredNote && (
+                <div className={"text-xl p-2 rounded-sm " + hoveredNote.color}>
+                  {hoveredNote.name}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
