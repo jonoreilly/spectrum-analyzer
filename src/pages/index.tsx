@@ -1,61 +1,96 @@
 import { useRef, useState } from "react";
-import { decodeAudioFile } from "@/src/utils/audio";
+import { decodeAudioFile, setMicrophoneListener } from "@/src/utils/audio";
 import { doFft } from "@/src/utils/fourierTransform";
 import { Note } from "@/src/utils/audio/notes";
 import Settings, { Size } from "@/src/components/Settings";
 import Piano from "@/src/components/Piano";
 import Graph from "@/src/components/Graph";
+import { nextFrame } from "@/src/utils/react";
+import { Result } from "@/src/utils/utils";
+import { ComplexNumber } from "@/src/utils/fourierTransform/complexNumbers";
 
 export default function Home() {
-  const [file, setFile] = useState<File>();
+  const [file, setFile] = useState<Result<File>>({ status: "initial" });
 
   const [audioBuffer, setAudioBuffer] = useState<
-    Awaited<ReturnType<typeof decodeAudioFile>>
-  >({
-    status: "initial",
-  });
+    Result<AudioBuffer, "unsupported-file-type" | "no-audio-context">
+  >({ status: "initial" });
 
-  const [fft, setFft] = useState<ReturnType<typeof doFft>>({
+  const [fft, setFft] = useState<Result<ComplexNumber[][]>>({
     status: "initial",
   });
 
   const fileIdRef = useRef(0);
 
   async function onFileChange(newFile?: File) {
-    const fileId = ++fileIdRef.current;
+    if (!newFile) {
+      setFile({ status: "initial" });
 
-    setFile(newFile);
+      setAudioBuffer({ status: "initial" });
+
+      setFft({ status: "initial" });
+
+      return;
+    }
+
+    setFile({ status: "pending" });
 
     setAudioBuffer({ status: "pending" });
 
     setFft({ status: "pending" });
 
+    // File
+
+    const fileId = ++fileIdRef.current;
+
+    setFile({ status: "success", value: newFile });
+
     // Decode audio file
-    setTimeout(async () => {
-      const newAudioBuffer = await decodeAudioFile(newFile);
 
-      if (fileId !== fileIdRef.current) return;
+    await nextFrame();
 
-      setAudioBuffer(newAudioBuffer);
+    const newAudioBuffer = await decodeAudioFile(newFile);
 
-      if (newAudioBuffer.status !== "success") {
-        setFft({ status: "initial" });
+    if (fileId !== fileIdRef.current) return;
 
-        return;
-      }
+    setAudioBuffer(newAudioBuffer);
 
-      setTimeout(() => {
-        // Do FFT
+    if (newAudioBuffer.status !== "success") {
+      setFft({ status: "initial" });
 
-        const samples = [...newAudioBuffer.value.getChannelData(0)];
+      return;
+    }
 
-        const newFft = doFft(samples);
+    // Do FFT
 
-        if (fileId !== fileIdRef.current) return;
+    await nextFrame();
 
-        setFft(newFft);
-      }, 100);
-    }, 100);
+    const samples = [...newAudioBuffer.value.getChannelData(0)];
+
+    const newFft = doFft(samples);
+
+    if (fileId !== fileIdRef.current) return;
+
+    setFft(newFft);
+  }
+
+  const [samples, setSamples] = useState<number[]>([]);
+
+  async function onUseMicrophone() {
+    ++fileIdRef.current;
+
+    setFile({ status: "initial" });
+
+    setAudioBuffer({ status: "pending" });
+
+    setFft({ status: "pending" });
+
+    const allData: number[] = [];
+
+    setMicrophoneListener((data) => {
+      allData.push(...data);
+      setSamples([...allData]);
+    });
   }
 
   const [isWhiteBackground, setIsWhiteBackground] = useState(true);
@@ -89,7 +124,10 @@ export default function Home() {
           onHasCompressionChange={setHasCompression}
           onCompressionChange={setCompression}
           onCellSizeChange={setCellSize}
+          onUseMicrophone={onUseMicrophone}
         />
+
+        <div>samples: {samples.length}</div>
 
         <Piano
           selectedNotes={selectedNotes}
